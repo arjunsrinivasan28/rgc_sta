@@ -1,0 +1,17 @@
+# Redundant with rgcData_Nature08/ (already unzipped and committed)
+rgcData_Nature08.zip
+__MACOSX/
+
+# macOS resource-fork junk from the zip
+._*
+
+# Python virtual environment -- recreate with:
+#   python3 -m venv .venv && source .venv/bin/activate
+#   pip install numpy scipy matplotlib
+.venv/
+
+# Vercel CLI local metadata / credentials -- never commit these
+webapp/.vercel/
+webapp/.env.local
+
+.DS_Store

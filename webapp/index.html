@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>RGC Receptive Field Explorer</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="title-block">
+      <h1>RGC RECEPTIVE FIELD EXPLORER</h1>
+      <p class="subtitle">Spike-triggered averages computed from the Chichilnisky/Pillow retinal ganglion cell
+        white-noise dataset (<span id="n-cells">-</span> cells, <span id="n-frames">-</span> stimulus frames,
+        <span id="n-spikes-total">-</span> total spikes). Phase 1 of the Wandell/Chichilnisky retina project.</p>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="cell-list" id="cell-list">
+      <!-- populated by app.js -->
+    </section>
+
+    <section class="detail">
+      <div class="detail-head">
+        <h2 id="detail-title">Loading...</h2>
+        <p class="detail-sub" id="detail-sub"></p>
+      </div>
+
+      <div class="panels">
+        <div class="panel">
+          <div class="panel-head">
+            <span>SPATIAL RECEPTIVE FIELD</span>
+            <span class="panel-meta" id="lag-readout"></span>
+          </div>
+          <canvas id="spatial-canvas" width="360" height="360"></canvas>
+          <div class="lag-control">
+            <button id="play-btn" class="btn btn-small">&#9654; PLAY</button>
+            <input type="range" id="lag-slider" min="0" max="19" value="16" step="1" />
+          </div>
+          <p class="panel-desc">Drag the slider (or hit play) to scrub through time lags -- watch the
+            receptive field appear, peak, and fade as you move from "long before a spike" to "right before a spike."</p>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head"><span>TIME COURSE AT PEAK PIXEL</span></div>
+          <canvas id="time-canvas" width="360" height="220"></canvas>
+          <p class="panel-desc">The STA value at this cell's single strongest pixel, across all 20 time lags.
+            For an OFF cell this dips sharply negative near the peak lag; for an ON cell it rises sharply positive.</p>
+        </div>
+
+        <div class="panel panel-wide">
+          <div class="panel-head"><span>FULL STA (ALL LAGS &times; ALL PIXELS)</span></div>
+          <canvas id="full-canvas" width="760" height="180"></canvas>
+          <p class="panel-desc">Every pixel's response at every lag, in one image -- rows are time lags (top =
+            oldest, bottom = most recent/lag 0), columns are the 100 flattened spatial pixels. The vertical stripe
+            is this cell's receptive field location; it only lights up around the peak lag.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    4T/3T pixel MLP project's sibling: same "SPICE/data → fast computation → interactive plot" idea,
+    applied to real retinal spike data instead of simulated circuits.
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
