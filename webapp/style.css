@@ -107,6 +107,18 @@ input[type="range"] { flex: 1; accent-color: var(--accent); }
 .btn:hover { border-color: var(--accent); color: var(--accent); }
 .btn-small { padding: 5px 8px; }
 
+.phase2 {
+  padding: 24px 24px 8px;
+  border-top: 1px solid var(--border);
+}
+.phase2 h2 { margin: 0 0 4px 0; font-size: 16px; letter-spacing: 0.06em; color: var(--accent); }
+.result-img {
+  display: block;
+  width: 100%;
+  border-radius: 3px;
+  background: #fff;
+}
+
 .footer {
   text-align: center;
   padding: 18px;

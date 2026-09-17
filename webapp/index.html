@@ -60,6 +60,35 @@
     </section>
   </main>
 
+  <section class="phase2">
+    <h2>PHASE 2 -- BOTH "CHOOSE YOUR OWN ADVENTURE" PATHS</h2>
+    <p class="detail-sub">Both paths predict cell 0's spikes from the same real stimulus data and are
+      compared against the same held-out recorded spikes -- not just one path, per the roadmap.</p>
+
+    <div class="panels">
+      <div class="panel panel-wide">
+        <div class="panel-head"><span>PATH B -- CNN vs. STA BASELINE</span></div>
+        <img src="path_b_cnn_vs_sta.png" alt="Path B: CNN vs STA comparison" class="result-img" />
+        <p class="panel-desc">A small CNN (2 conv layers over the 10&times;10 stimulus history) trained with a
+          Poisson loss, compared against the Phase 1 STA on an identical held-out temporal test split (model
+          selection done on a separate validation block, never the test set). Test-set correlation: STA
+          0.570, CNN <strong>0.687</strong> -- a real, honest improvement.</p>
+      </div>
+
+      <div class="panel panel-wide">
+        <div class="panel-head"><span>PATH A -- NGSPICE RETINA CIRCUIT</span></div>
+        <img src="path_a_circuit_result.png" alt="Path A: ngspice circuit result" class="result-img" />
+        <p class="panel-desc">A real 3-stage ngspice circuit -- resistive-grid spatial (center-surround)
+          filtering, an RC temporal low-pass, and an integrate-and-fire spike generator -- driven by real
+          stimulus data. 45 circuit-generated spikes vs. 25 real spikes in the same window, with rough
+          temporal correspondence. Getting this to converge and behave sensibly required finding and fixing
+          six distinct numerical/modeling bugs (steep-comparator timestep collapse, a switch miscalibrated
+          against the wrong voltage scale, a too-fast membrane recovery, and a gain that amplified sampling
+          noise into a DC bias) -- see the project README for the full list.</p>
+      </div>
+    </div>
+  </section>
+
   <footer class="footer">
     4T/3T pixel MLP project's sibling: same "SPICE/data → fast computation → interactive plot" idea,
     applied to real retinal spike data instead of simulated circuits.
