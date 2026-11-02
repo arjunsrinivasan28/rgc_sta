@@ -72,21 +72,77 @@
         <p class="panel-desc">A small CNN (2 conv layers over the 10&times;10 stimulus history) trained with a
           Poisson loss, compared against the Phase 1 STA on an identical held-out temporal test split (model
           selection done on a separate validation block, never the test set). Test-set correlation: STA
-          0.570, CNN <strong>0.687</strong> -- a real, honest improvement.</p>
+          0.570, CNN <strong>0.687</strong> on a single split. The next panel shows how much of that gap is just clipping
+          negative predictions.</p>
+      </div>
+
+      <div class="panel panel-wide">
+        <div class="panel-head"><span>5-FOLD CROSS-VALIDATION: DOES CLIPPING EXPLAIN THE CNN'S WIN?</span></div>
+        <img src="path_b_cv.png" alt="5-fold cross-validation: STA, clipped STA, CNN" class="result-img" />
+        <p class="panel-desc">An STA prediction is a weighted sum of the stimulus, so it can go negative, but spike counts cannot.
+          Clipping the STA's prediction at zero (a point raised by Prof. Wandell) raises its correlation from 0.570 to
+          <strong>0.662</strong> and its fit quality (R&sup2;) from 0.10 to 0.44, closing about 80% of the gap to the CNN
+          (0.684 &plusmn; 0.005, still ahead by about 0.02 in every fold). Most of what the CNN learned over the STA is to avoid
+          negative predictions. Still a single cell.</p>
       </div>
 
       <div class="panel panel-wide">
         <div class="panel-head"><span>PATH A -- NGSPICE RETINA CIRCUIT</span></div>
-        <img src="path_a_circuit_result.png" alt="Path A: ngspice circuit result" class="result-img" />
+        <img src="path_a_circuit_flipped.png" alt="Path A: ngspice circuit result with the input sign flipped for an OFF cell" class="result-img" />
         <p class="panel-desc">A real 3-stage ngspice circuit -- resistive-grid spatial (center-surround)
           filtering, an RC temporal low-pass, and an integrate-and-fire spike generator -- driven by real
-          stimulus data. 45 circuit-generated spikes vs. 25 real spikes in the same window, with rough
-          temporal correspondence. Getting this to converge and behave sensibly required finding and fixing
+          stimulus data. Cell 0 is an OFF cell, so the drive into the circuit is inverted: the circuit then produces 51 spikes
+          vs. 25 real spikes in frames 0 to 100, and its 5-frame spike counts correlate <strong>+0.74</strong> with the real cell's
+          (hand-tuned, not fit; it still fires too many spikes in bursts). Getting this to converge and behave sensibly required finding and fixing
           six distinct numerical/modeling bugs (steep-comparator timestep collapse, a switch miscalibrated
           against the wrong voltage scale, a too-fast membrane recovery, and a gain that amplified sampling
           noise into a DC bias) -- see the project README for the full list.</p>
       </div>
+
+      <div class="panel panel-wide">
+        <div class="panel-head"><span>PATH A: FLIPPING THE SIGN FOR AN OFF CELL, FOUR STIMULUS WINDOWS</span></div>
+        <img src="path_a_sign_flip.png" alt="Correlation with the real cell before and after flipping the sign" class="result-img" />
+        <p class="panel-desc">With the original sign (the circuit responds to brightening) the circuit's spike counts correlate
+          -0.36 with the real cell on average; with the sign flipped they correlate <strong>+0.54</strong> (+0.39 to +0.74 across
+          four separate 100-frame windows). The sign came from the Phase 1 STA, not from fitting this score. The circuit still fires
+          1.5 to 2.7 times too many spikes; a refractory period, adaptation, and fitting its parameters to the cell are next.</p>
+      </div>
+
+      <div class="panel panel-wide">
+        <div class="panel-head"><span>PATH A: REFRACTORY PERIOD, ADAPTATION AND A PARAMETER FIT</span></div>
+        <img src="circuit_fit.png" alt="Hand-tuned vs fitted circuit on held-out windows" class="result-img" />
+        <p class="panel-desc">Following the third meeting we added a refractory period and spike-frequency adaptation to the circuit
+          (each spike charges a fast and a slow RC node that raise the comparator's threshold) and fit eight parameters (gain,
+          threshold, time constants, refractory and adaptation strength) to the real spikes with a search that runs the actual
+          ngspice circuit. Fit on six 200-frame windows from the first 70% of the recording, then tested on five 400-frame windows
+          from the last 30%: mean correlation <strong>0.48</strong> fitted vs 0.45 hand-tuned, and 578 spikes vs 666 hand-tuned
+          (477 real). A modest gain. The fit chose <em>no</em> refractory period and a strong, slow adaptation (time constant about
+          0.26 s) instead, so adaptation did more for the extra spikes than the refractory period. This is one cell and a rough
+          search, so treat it as a first fit, not a final one.</p>
+      </div>
+
+      <div class="panel panel-wide">
+        <div class="panel-head"><span>PHASE 3: HELD-OUT REPEAT MOVIE AND THE REAL PSTH</span></div>
+        <img src="phase3_psth.png" alt="STA, clipped STA and CNN against the real PSTH on the held-out repeat movie" class="result-img" />
+        <p class="panel-desc">A separate 10-second movie shown 600 times was held out of all training. Averaging the 600 spike trains
+          gives the cell's true firing rate (PSTH). Correlation of each model's prediction with that PSTH: STA
+          <strong>0.77</strong>, STA clipped at zero <strong>0.90</strong>, CNN <strong>0.92</strong> (R&sup2; 0.65, 0.80, 0.84). The
+          repeats are so consistent that the noise ceiling is about 1.0. The same ordering as in cross-validation, and clipping again
+          closes most of the gap to the CNN.</p>
+        <img src="phase3_circuit.png" alt="The circuit compared with the CNN and STA on the repeat movie" class="result-img" />
+        <p class="panel-desc">The ngspice circuit run on the full 1200-frame repeat movie (6 times longer than the first runs), compared in
+          5-frame bins: <strong>0.56</strong> for both the hand-tuned and the fitted circuit, against 0.94 for the clipped STA and 0.95
+          for the CNN. It follows the cell's timing but fires about 20 to 40% too many spikes, and the fit did not help on this movie.
+          The circuit is the interpretable model; it is not yet the accurate one.</p>
+      </div>
     </div>
+  </section>
+
+  <section class="phase2">
+    <h2>NEXT: THE SAME IDEAS ON MOUSE RETINA</h2>
+    <p class="detail-sub">Following the suggestion to try OpenRetina data: 240 mouse ganglion cells (Euler lab) responding to natural
+      movies, fit with an STA, a ridge linear model, and a CNN. Both ridge and the CNN beat the STA; the CNN does not beat the tuned linear model, and clipping predictions at zero (which helps the monkey STA) does not help there.</p>
+    <p style="margin-top:14px"><a class="btn" href="https://mouse-rgc-explorer.vercel.app" target="_blank" rel="noopener">OPEN THE MOUSE RGC EXPLORER &rarr;</a></p>
   </section>
 
   <footer class="footer">

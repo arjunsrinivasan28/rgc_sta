@@ -126,3 +126,5 @@ input[type="range"] { flex: 1; accent-color: var(--accent); }
   color: var(--text-dim);
   border-top: 1px solid var(--border);
 }
+
+a.btn { display: inline-block; text-decoration: none; padding: 9px 14px; }

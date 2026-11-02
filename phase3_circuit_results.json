@@ -1,0 +1,23 @@
+{
+ "circuit hand": {
+  "corr_psth_5frame": 0.5579945762449042,
+  "spikes": 427,
+  "psth_spikes": 301.905,
+  "mean_rate_ratio": 1.3772490498486747
+ },
+ "circuit fitted": {
+  "corr_psth_5frame": 0.5588173081206893,
+  "spikes": 373,
+  "psth_spikes": 301.905,
+  "mean_rate_ratio": 1.203077038860786
+ },
+ "STA clipped": {
+  "corr_psth_5frame": 0.9378911360178834
+ },
+ "CNN": {
+  "corr_psth_5frame": 0.9537132243445694
+ },
+ "STA": {
+  "corr_psth_5frame": 0.883027698777895
+ }
+}

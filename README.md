@@ -160,3 +160,53 @@ histogram) averaged over the 600 repeats -- the actual generalization test
 neither Path A nor Path B has been through yet (both were only checked
 against held-out *frames* of the same recording, not the separate repeat
 dataset Wandell's email specifically calls out for this purpose).
+
+
+## Follow-up after the third meeting: rectification and the circuit's sign
+
+**Rectified STA (`06_rectified_sta.py`).** Wandell pointed out that the STA prediction can go negative while
+spike counts cannot, and that a CNN with an exponential output never goes negative. Clipping the STA at zero
+(same 5 contiguous folds, cell 0, mean +/- sd over folds):
+
+| Model | Test correlation | Scaled R^2 |
+|---|---|---|
+| STA | 0.570 +/- 0.008 | 0.097 |
+| STA clipped at 0 | 0.662 +/- 0.005 | 0.437 |
+| STA clipped, threshold tuned on validation | 0.663 +/- 0.004 | 0.436 |
+| CNN | 0.684 +/- 0.005 | not computed |
+
+Clipping alone closes about 80% of the STA-to-CNN gap in correlation (0.570 to 0.662, vs. CNN 0.684) and
+quadruples the fit quality (R^2). The CNN is still ahead by about 0.02 in every fold, so it has a small edge
+beyond rectification, but most of what the CNN "learned" over the STA was to not predict negative counts.
+Scaling does not change correlation; it is why R^2 improves.
+
+**Circuit sign (`04_path_a_ngspice_circuit.py`, `CIRCUIT_SIGN`).** Cell 0 is OFF-center but the circuit responded
+to brightening. Inverting the drive (equivalent to flipping the threshold sign) changes the correlation between
+5-frame spike counts of the circuit and the real cell, on four 100-frame windows:
+
+| Window (frames) | Real spikes | Original: spikes, r | Flipped: spikes, r |
+|---|---|---|---|
+| 0 to 100 (where parameters were hand-tuned) | 25 | 45, -0.36 | 51, +0.74 |
+| 20,000 to 20,100 | 28 | 71, -0.38 | 39, +0.54 |
+| 60,000 to 60,100 | 27 | 13, -0.36 | 67, +0.47 |
+| 100,000 to 100,100 | 25 | 27, -0.34 | 44, +0.39 |
+
+Mean r goes from -0.36 to +0.54. The sign was chosen from the Phase 1 STA (OFF), not fit to this metric. The
+circuit still fires 1.5 to 2.7 times too many spikes and is still hand-tuned; refractory period, threshold,
+adaptation, and automatic parameter fitting are the next steps. Figure: `plots/path_a_sign_flip.png`.
+
+
+## Follow-up after the third meeting, part 2: refractory period, circuit fit, Phase 3
+
+- **Circuit extensions (`04_path_a_ngspice_circuit.py`).** Each spike charges a fast RC node (refractory) and a slow RC node
+  (adaptation) through switches; their voltages raise the comparator threshold. Both default to 0, which is the original circuit.
+- **Fit (`08_circuit_fit.py`).** Random search plus local refinement of eight parameters, running the real ngspice circuit, on six
+  200-frame windows from the first 70% of the recording; tested on five 400-frame windows from the last 30%. Held-out mean
+  correlation 0.476 fitted vs 0.451 hand-tuned; spikes 578 vs 666 (477 real). The fit set the refractory strength to 0 and chose
+  strong, slow adaptation (tau about 0.26 s). Threshold hit the lower search bound (0.05 V), so the range was too narrow there.
+- **Phase 3 (`07_phase3_psth.py`, `09_phase3_circuit.py`).** Held-out 1200-frame repeat movie, 600 repeats, PSTH as the target.
+  Correlation with the PSTH: STA 0.765, clipped STA 0.899, CNN 0.915 (R^2 0.65 / 0.80 / 0.84); noise ceiling about 1.0.
+  Circuit on the same movie in 5-frame bins: 0.558 hand-tuned, 0.559 fitted (STA clipped 0.938, CNN 0.954 in the same bins).
+  The fitted circuit fires 20 to 40% too many spikes on the repeat movie.
+- Caveats: one cell; the fit objective counts rising edges of the spike signal, so a burst of chatter inflates spike counts;
+  the 5-frame bin is coarse.

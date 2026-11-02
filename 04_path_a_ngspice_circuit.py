@@ -67,15 +67,22 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import subprocess
+import os
+import json
 
 HERE = Path(__file__).resolve().parent
 DATA_DIR = HERE / "rgcData_Nature08"
-CIRCUIT_DIR = HERE / "path_a_circuit"
+# CIRCUIT_SIGN: cell 0 is an OFF-center cell (it fires when its pixel gets DARKER),
+# so the drive into the circuit is inverted (-1). The first version used +1 and
+# responded to brightening instead; set CIRCUIT_SIGN=1 to reproduce that.
+CIRCUIT_SIGN = float(os.environ.get("CIRCUIT_SIGN", "-1"))
+TAG = os.environ.get("CIRCUIT_TAG", "")
+CIRCUIT_DIR = HERE / ("path_a_circuit" + (f"_{TAG}" if TAG else ""))
 PLOTS_DIR = HERE / "plots"
 
 NX, NY = 10, 10
 CELL_INDEX = 0          # same cell as Phase 1 / Path B, for direct comparison
-FRAME_START, FRAME_END = 0, 100  # the frame slice we actually simulate -- reduced
+FRAME_START = int(os.environ.get("CIRCUIT_START", "0")); FRAME_END = FRAME_START + int(os.environ.get("CIRCUIT_FRAMES", "100"))  # the frame slice we actually simulate -- reduced
 # from an initial 500, then 200, after the full/larger circuits turned out to be
 # too slow to solve within a reasonable time even after the grid-radius cut
 # below (each timestep on this stiff nonlinear circuit is expensive; verified
@@ -123,6 +130,11 @@ R_LEAK = 2e6       # membrane leak resistor (ohms)
 # without needing to hand-tune the switch's hysteresis band.
 C_MEM = 3e-7       # membrane capacitance (farads) -- tau ~= 95kOhm * 3e-7F = 28.5ms
 V_THRESH = 0.15    # spike threshold (volts)
+# Added after the third meeting (Wandell: "turn on refractory period", plus spike-frequency adaptation).
+# Each spike charges a fast RC node (refractory) and a slow RC node (adaptation); the comparator's threshold
+# is V_THRESH + REF_K*V(refr) + ADA_K*V(adapt). Both default to 0 (= the original circuit).
+REF_K, REF_TAU = float(os.environ.get("REF_K", "0")), float(os.environ.get("REF_TAU", "0.005"))
+ADA_K, ADA_TAU = float(os.environ.get("ADA_K", "0")), float(os.environ.get("ADA_TAU", "0.1"))
 V_SPIKE = 3.3      # spike pulse amplitude (volts)
 
 
@@ -130,13 +142,14 @@ def node_name(prefix, r, c):
     return f"{prefix}_{r}_{c}"
 
 
-def build_circuit(stim_slice, target_rc):
+def build_circuit(stim_slice, target_rc, outdir=None):
     """
     stim_slice: (n_frames, 100) real stimulus data for the frames we're
     simulating. target_rc: (row, col) of the cell we're modeling (its real
     STA peak pixel location, from Phase 1).
     """
-    CIRCUIT_DIR.mkdir(exist_ok=True)
+    outdir = Path(outdir) if outdir else CIRCUIT_DIR
+    outdir.mkdir(exist_ok=True)
     n_frames = stim_slice.shape[0]
     t_stop = n_frames * FRAME_DT
     tr, tc = target_rc
@@ -210,7 +223,7 @@ def build_circuit(stim_slice, target_rc):
     lines.append(f"* Center-surround output at the target cell's real receptive-field")
     lines.append(f"* location (row={tr}, col={tc}, from Phase 1's STA peak pixel).")
     lines.append(
-        f"Bcs centersurround 0 V={CENTER_SURROUND_GAIN:.6g}*"
+        f"Bcs centersurround 0 V={CIRCUIT_SIGN * CENTER_SURROUND_GAIN:.6g}*"
         f"(V({node_name('photo', tr, tc)})-V({node_name('horiz', tr, tc)}))"
     )
 
@@ -258,8 +271,26 @@ def build_circuit(stim_slice, target_rc):
         "* ~80, a 15x slowdown). Gain 20 is still a sharp, effectively-binary"
     )
     lines.append("* comparator but stays numerically solvable.")
+    thr = f"{V_THRESH:.6g}"
+    # The refractory/adaptation nodes are charged through switches controlled by the spike node (binary, with
+    # hysteresis), NOT by the analog spike voltage: coupling the analog level back into the threshold made a
+    # negative-feedback loop that parked the comparator at its midpoint (spike stuck at ~1.6 V, zero spikes).
+    if REF_K > 0 or ADA_K > 0:
+        lines.append(f"Vrail rail 0 {V_SPIKE}")
+    if REF_K > 0:
+        lines.append("Sref rail refr spike 0 SWREF")
+        lines.append("Cref refr 0 1e-7")
+        lines.append(f"Rrefd refr 0 {REF_TAU / 1e-7:.6g}")
+        lines.append(f".model SWREF SW(Ron=1k Roff=1e9 Vt={V_SPIKE/2:.6g} Vh={V_SPIKE*0.2:.6g})")
+        thr += f"+{REF_K:.6g}*V(refr)"
+    if ADA_K > 0:
+        lines.append("Sada rail adapt spike 0 SWADA")
+        lines.append("Cada adapt 0 1e-7")
+        lines.append(f"Radad adapt 0 {ADA_TAU / 1e-7:.6g}")
+        lines.append(f".model SWADA SW(Ron=100k Roff=1e9 Vt={V_SPIKE/2:.6g} Vh={V_SPIKE*0.2:.6g})")
+        thr += f"+{ADA_K:.6g}*V(adapt)"
     lines.append(
-        f"Bspike spike 0 V={V_SPIKE/2:.6g}*(1+tanh((V(vmem)-{V_THRESH:.6g})*20))"
+        f"Bspike spike 0 V={V_SPIKE/2:.6g}*(1+tanh((V(vmem)-({thr}))*20))"
     )
     lines.append("Sreset vmem 0 spike 0 SWRESET")
     lines.append(
@@ -310,11 +341,14 @@ def build_circuit(stim_slice, target_rc):
     lines.append(".control")
     lines.append("run")
     lines.append("wrdata circuit_out.txt v(centersurround) v(bipolar) v(vmem) v(spike)")
+    extra = (" v(refr)" if REF_K > 0 else "") + (" v(adapt)" if ADA_K > 0 else "")
+    if extra:
+        lines.append(f"wrdata circuit_extra.txt{extra}")
     lines.append("quit")
     lines.append(".endc")
     lines.append(".end")
 
-    netlist_path = CIRCUIT_DIR / "retina_circuit.cir"
+    netlist_path = outdir / "retina_circuit.cir"
     with open(netlist_path, "w") as f:
         f.write("\n".join(lines))
     print(f"Wrote netlist: {netlist_path} ({len(lines)} lines, "
@@ -325,7 +359,7 @@ def build_circuit(stim_slice, target_rc):
 def run_ngspice(netlist_path):
     result = subprocess.run(
         ["ngspice", "-b", str(netlist_path)],
-        cwd=str(CIRCUIT_DIR), capture_output=True, text=True, timeout=1200,
+        cwd=str(Path(netlist_path).parent), capture_output=True, text=True, timeout=1200,
     )
     if result.returncode != 0:
         raise RuntimeError(f"ngspice failed:\n{result.stdout}\n{result.stderr}")
@@ -379,26 +413,38 @@ def main():
     circuit_spike_times_frames = circuit_spike_times_s / FRAME_DT
     print(f"Circuit-generated spikes in this window: {len(circuit_spike_times_s)}")
 
+    n_frames_win = FRAME_END - FRAME_START
+    edges = np.arange(0, n_frames_win + 5, 5)
+    real_binned, _ = np.histogram(real_spikes_in_window - FRAME_START, bins=edges)
+    circ_binned, _ = np.histogram(circuit_spike_times_frames, bins=edges)
+    r_binned = float(np.corrcoef(real_binned, circ_binned)[0, 1]) if circ_binned.std() > 0 else float("nan")
+    print(f"Correlation of 5-frame spike counts, circuit vs real: {r_binned:.3f} "
+          f"(sign={CIRCUIT_SIGN:+.0f}, frames={n_frames_win})")
+    PLOTS_DIR.mkdir(exist_ok=True)
+    with open(PLOTS_DIR / f"path_a_result{('_' + TAG) if TAG else ''}.json", "w") as f:
+        json.dump({"sign": CIRCUIT_SIGN, "frames": n_frames_win, "real_spikes": int(len(real_spikes_in_window)),
+                   "start_frame": FRAME_START, "circuit_spikes": int(len(circuit_spike_times_s)), "binned_corr_5frames": r_binned}, f, indent=2)
+
     # --- Plot: circuit's internal signals + a spike-raster comparison ---
     PLOTS_DIR.mkdir(exist_ok=True)
     fig, axes = plt.subplots(4, 1, figsize=(11, 9), sharex=True)
 
-    axes[0].plot(cs[0] / FRAME_DT, cs[1], linewidth=0.8, color="tab:blue")
+    axes[0].plot(cs[0] / FRAME_DT + FRAME_START, cs[1], linewidth=0.8, color="tab:blue")
     axes[0].set_ylabel("center-surround\n(stage 1) [V]")
     axes[0].set_title(f"Path A retina circuit -- cell {CELL_INDEX}, "
                        f"frames {FRAME_START}-{FRAME_END}")
 
-    axes[1].plot(bipolar[0] / FRAME_DT, bipolar[1], linewidth=0.8, color="tab:orange")
+    axes[1].plot(bipolar[0] / FRAME_DT + FRAME_START, bipolar[1], linewidth=0.8, color="tab:orange")
     axes[1].set_ylabel("bipolar (stage 2,\nRC-filtered) [V]")
 
-    axes[2].plot(vmem[0] / FRAME_DT, vmem[1], linewidth=0.8, color="tab:green")
+    axes[2].plot(vmem[0] / FRAME_DT + FRAME_START, vmem[1], linewidth=0.8, color="tab:green")
     axes[2].axhline(V_THRESH, color="gray", linestyle="--", linewidth=0.8, label="threshold")
     axes[2].set_ylabel("membrane\n(stage 3) [V]")
     axes[2].legend(fontsize=8)
 
     axes[3].eventplot([real_spikes_in_window], lineoffsets=1, colors="black",
                        label=f"real spikes (n={len(real_spikes_in_window)})")
-    axes[3].eventplot([circuit_spike_times_frames], lineoffsets=0, colors="tab:red",
+    axes[3].eventplot([circuit_spike_times_frames + FRAME_START], lineoffsets=0, colors="tab:red",
                        label=f"circuit spikes (n={len(circuit_spike_times_s)})")
     axes[3].set_yticks([0, 1])
     axes[3].set_yticklabels(["circuit", "real"])
@@ -407,7 +453,7 @@ def main():
     axes[3].legend(fontsize=8, loc="upper right")
 
     fig.tight_layout()
-    out_path = PLOTS_DIR / "path_a_circuit_result.png"
+    out_path = PLOTS_DIR / f"path_a_circuit_result{('_' + TAG) if TAG else ''}.png"
     fig.savefig(out_path, dpi=130)
     print(f"\nSaved {out_path}")
 

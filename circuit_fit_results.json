@@ -1,0 +1,117 @@
+{
+ "hand": {
+  "params": {
+   "CENTER_SURROUND_GAIN": 4.0,
+   "V_THRESH": 0.15,
+   "tau_bip": 0.03,
+   "C_MEM": 3e-07,
+   "REF_K": 0.0,
+   "REF_TAU": 0.005,
+   "ADA_K": 0.0,
+   "ADA_TAU": 0.1
+  },
+  "train_objective": 0.13922106106292384,
+  "heldout": [
+   {
+    "start": 105000,
+    "circuit_spikes": 110,
+    "real_spikes": 99,
+    "corr": 0.34720090090312705
+   },
+   {
+    "start": 113000,
+    "circuit_spikes": 205,
+    "real_spikes": 82,
+    "corr": 0.6624144757605747
+   },
+   {
+    "start": 121000,
+    "circuit_spikes": 183,
+    "real_spikes": 103,
+    "corr": 0.501783235855862
+   },
+   {
+    "start": 129000,
+    "circuit_spikes": 77,
+    "real_spikes": 100,
+    "corr": 0.36030500318549036
+   },
+   {
+    "start": 137000,
+    "circuit_spikes": 91,
+    "real_spikes": 93,
+    "corr": 0.3821658829632181
+   }
+  ]
+ },
+ "fitted": {
+  "params": {
+   "CENTER_SURROUND_GAIN": 4.62312720694038,
+   "V_THRESH": 0.05,
+   "tau_bip": 0.010472182196311469,
+   "C_MEM": 9.260679231407e-07,
+   "REF_K": 0.0,
+   "REF_TAU": 0.006044334427951345,
+   "ADA_K": 0.44218417664070103,
+   "ADA_TAU": 0.2615238046026789
+  },
+  "train_objective": 0.3001541147605415,
+  "heldout": [
+   {
+    "start": 105000,
+    "circuit_spikes": 110,
+    "real_spikes": 99,
+    "corr": 0.3688638833041323
+   },
+   {
+    "start": 113000,
+    "circuit_spikes": 160,
+    "real_spikes": 82,
+    "corr": 0.6249452263693024
+   },
+   {
+    "start": 121000,
+    "circuit_spikes": 143,
+    "real_spikes": 103,
+    "corr": 0.5259608400886453
+   },
+   {
+    "start": 129000,
+    "circuit_spikes": 74,
+    "real_spikes": 100,
+    "corr": 0.39678784241400367
+   },
+   {
+    "start": 137000,
+    "circuit_spikes": 91,
+    "real_spikes": 93,
+    "corr": 0.46105184169974506
+   }
+  ]
+ },
+ "history": [
+  0.18942918864508984,
+  0.2186793416560848,
+  0.2725967882310784,
+  0.2964801512760566,
+  0.2964801512760566,
+  0.3001541147605415
+ ],
+ "train_starts": [
+  3000,
+  20000,
+  41000,
+  58000,
+  75000,
+  90000
+ ],
+ "train_len": 200,
+ "test_starts": [
+  105000,
+  113000,
+  121000,
+  129000,
+  137000
+ ],
+ "test_len": 400
+}

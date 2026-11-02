@@ -1,0 +1,8 @@
+{
+  "sign": -1.0,
+  "frames": 100,
+  "real_spikes": 25,
+  "start_frame": 100000,
+  "circuit_spikes": 44,
+  "binned_corr_5frames": 0.3912323780717868
+}
