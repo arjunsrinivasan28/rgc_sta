@@ -87,6 +87,15 @@
       </div>
 
       <div class="panel panel-wide">
+        <div class="panel-head"><span>ALL 27 CELLS: STA, CLIPPED STA, CNN</span></div>
+        <img src="all_cells.png" alt="STA, clipped STA and CNN test correlation for all 27 cells" class="result-img" />
+        <p class="panel-desc">The same three models on every cell (one 70/10/20 time split each). Mean test correlation: STA
+          <strong>0.50</strong>, STA clipped at zero <strong>0.57</strong>, CNN <strong>0.60</strong>. The CNN beats the plain STA in 27 of 27
+          cells, and clipping alone closes a median <strong>70%</strong> of that gap. The CNN is still slightly ahead of the clipped STA
+          in all 27, so clipping explains most, not all, of what the CNN learned.</p>
+      </div>
+
+      <div class="panel panel-wide">
         <div class="panel-head"><span>PATH A -- NGSPICE RETINA CIRCUIT</span></div>
         <img src="path_a_circuit_flipped.png" alt="Path A: ngspice circuit result with the input sign flipped for an OFF cell" class="result-img" />
         <p class="panel-desc">A real 3-stage ngspice circuit -- resistive-grid spatial (center-surround)

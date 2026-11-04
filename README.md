@@ -210,3 +210,6 @@ adaptation, and automatic parameter fitting are the next steps. Figure: `plots/p
   The fitted circuit fires 20 to 40% too many spikes on the repeat movie.
 - Caveats: one cell; the fit objective counts rising edges of the spike signal, so a burst of chatter inflates spike counts;
   the 5-frame bin is coarse.
+
+- **All 27 cells (`10_all_cells.py`).** One 70/10/20 split per cell. Mean test correlation: STA 0.502, clipped STA 0.569, CNN 0.596.
+  CNN > STA in 27/27 cells, clipped > STA in 27/27, CNN > clipped in 27/27; clipping closes a median 70% of the STA-to-CNN gap.
